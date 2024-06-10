@@ -1,3 +1,9 @@
+/*
+TODO:
+Customize which mouse button to use for scrolling.
+Prevent voidMouse from running multiple instances when started multiple times.
+Customize scroll speed
+*/
 
 #define _WIN32_WINNT 0x0400
 
