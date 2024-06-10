@@ -7,6 +7,7 @@
 HHOOK hhook = 0;
 HMODULE hmod = 0;
 int isdown=0;
+int moved;
 int downx;
 int downy;
 int ofsx;
@@ -18,6 +19,9 @@ HANDLE hthread = 0;
 CRITICAL_SECTION cs;
 HANDLE hevent = 0;
 volatile int terminate = 0;
+HWND mclick_hwnd = 0;
+int mclick_x;
+int mclick_y;
 
 static DWORD __stdcall thread_proc(void *param);
 
@@ -504,7 +508,6 @@ int scroll_treeview(HWND hwnd,int dx,int dy)
 		int pos;
 		SCROLLINFO si;
 
-			
 			/*
 		pos = GetScrollPos(hwnd,SB_HORZ);
 		SetScrollPos(hwnd,SB_HORZ,pos + dx,TRUE);
@@ -538,6 +541,7 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode,WPARAM wParam,LPARAM lParam)
 	
 	if (wParam == WM_MBUTTONDOWN)
 	{
+		
 //		HWND hwnd;
 		
 //		hwnd = WindowFromPoint(mhs->pt);
@@ -549,6 +553,7 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode,WPARAM wParam,LPARAM lParam)
 			downy = mhs->pt.y;
 			dx = 0;
 			dy = 0;
+			moved = 0;
 			down_hwnd = WindowFromPoint(mhs->pt);
 			
 			if (down_hwnd)
@@ -561,7 +566,7 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode,WPARAM wParam,LPARAM lParam)
 			
 			LeaveCriticalSection(&cs);
 
-	printf("down %d %d\n",downx,downy);
+	printf("down2 %d %d\n",downx,downy);
 
 			return -1; 
 		}
@@ -569,17 +574,25 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode,WPARAM wParam,LPARAM lParam)
 	else
 	if (wParam == WM_MOUSEMOVE)
 	{
+//	printf("moved %d %d\n",mhs->pt.x,mhs->pt.y);
+
 		EnterCriticalSection(&cs);
+		
 		if (isdown)
 		{
 			dx += (mhs->pt.x - downx);
 			dy += (mhs->pt.y - downy);
 			
+			if ((dx) || (dy))
+			{
+				moved = 1;
+			}
+			
 			LeaveCriticalSection(&cs);
 			
 			SetEvent(hevent);
 		
-		    return -1; 
+			return -1; 
 		}
 
 		LeaveCriticalSection(&cs);
@@ -592,8 +605,20 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode,WPARAM wParam,LPARAM lParam)
 		eatit = 0;
 		
 		EnterCriticalSection(&cs);
+
+		printf("mup %d %d\n",isdown,moved);
+	
 		if (isdown)
-		{
+		{	
+			if (!moved)
+			{
+				mclick_hwnd = down_hwnd;
+				mclick_x = downx;
+				mclick_y = downy;
+				
+				SetEvent(hevent);
+			}
+		
 			eatit = 1;
 			isdown = 0;
 		}
@@ -601,10 +626,9 @@ LRESULT CALLBACK LowLevelMouseProc(int nCode,WPARAM wParam,LPARAM lParam)
 
 		if (eatit)
 		{
-		    return -1; 
+			return -1; 
 		}
 	}
-	
 
     return CallNextHookEx(hhook, nCode, wParam, lParam); 
 }
@@ -670,6 +694,9 @@ static DWORD __stdcall thread_proc(void *param)
 			int temp_downx;
 			int temp_downy;
 			HWND hwnd;
+			HWND temp_mclick_hwnd;
+			int temp_mclick_x;
+			int temp_mclick_y;
 			
 			EnterCriticalSection(&cs);
 		
@@ -706,7 +733,11 @@ static DWORD __stdcall thread_proc(void *param)
 			dx = 0;
 			dy = 0;
 			hwnd = down_hwnd;
-
+			temp_mclick_hwnd = mclick_hwnd;
+			temp_mclick_x = mclick_x;
+			temp_mclick_y = mclick_y;
+			mclick_hwnd = 0;
+			
 			LeaveCriticalSection(&cs);
 			
 			// move teh window!
@@ -805,7 +836,21 @@ static DWORD __stdcall thread_proc(void *param)
 				
 				ofsy += temp_dy - (wy * WHEEL_DELTA);
 			}
-		
+
+			if (temp_mclick_hwnd)
+			{
+				POINT pt;
+				
+				pt.x = temp_mclick_x;
+				pt.y = temp_mclick_y;
+				
+				ScreenToClient(temp_mclick_hwnd,&pt);
+				
+				printf("mclick %d\n",temp_mclick_hwnd);
+			
+				PostMessage(temp_mclick_hwnd,WM_MBUTTONDOWN,0,MAKELPARAM(pt.x,pt.y));
+				PostMessage(temp_mclick_hwnd,WM_MBUTTONUP,MK_MBUTTON,MAKELPARAM(pt.x,pt.y));
+			}
 		}
 
 			
