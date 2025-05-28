@@ -94,7 +94,7 @@ int WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmd
 					}
 				}
 			}
-			
+			/*
 			{
 				HANDLE (WINAPI *GetThreadDpiAwarenessContext_proc)(void);
 				
@@ -124,7 +124,7 @@ int WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmd
 						}
 					}
 				}
-			}
+			}*/
 		}
 	}
 	
