@@ -63,8 +63,70 @@ int WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmd
 	MSG msg;
 	int ret;
 
-//	AllocConsole();
+	// AllocConsole();
 	printf("voidmouse\n");
+	
+	{
+		HMODULE user32_hmod;
+		
+		user32_hmod = GetModuleHandleA("user32.dll");
+		if (user32_hmod)
+		{
+			printf("user32\n");
+				
+			{
+				BOOL (WINAPI *SetProcessDpiAwarenessContext_proc)(int value);
+			
+				SetProcessDpiAwarenessContext_proc = (void *)GetProcAddress(user32_hmod,"SetProcessDpiAwarenessContext");
+				
+				if (SetProcessDpiAwarenessContext_proc)
+				{
+					printf("SetProcessDpiAwarenessContext_proc\n");
+					
+					// DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+					if (SetProcessDpiAwarenessContext_proc(-4))
+					{
+						printf("SetProcessDpiAwarenessContext_proc OK\n");
+					}
+					else
+					{
+						printf("SetProcessDpiAwarenessContext_proc FAILED %u\n",GetLastError());
+					}
+				}
+			}
+			
+			{
+				HANDLE (WINAPI *GetThreadDpiAwarenessContext_proc)(void);
+				
+				GetThreadDpiAwarenessContext_proc = (void *)GetProcAddress(user32_hmod,"GetThreadDpiAwarenessContext");
+				
+				if (GetThreadDpiAwarenessContext_proc)
+				{
+					HANDLE ctx;
+
+					printf("GetThreadDpiAwarenessContext_proc\n");
+					
+					ctx = GetThreadDpiAwarenessContext_proc();
+					if (ctx)
+					{
+						int (WINAPI *GetAwarenessFromDpiAwarenessContext_proc)(HANDLE ctx);
+
+						printf("ctx %p\n",ctx);
+						
+						GetAwarenessFromDpiAwarenessContext_proc = (void *)GetProcAddress(user32_hmod,"GetAwarenessFromDpiAwarenessContext");
+						if (GetAwarenessFromDpiAwarenessContext_proc)
+						{
+							int level;
+
+							level = GetAwarenessFromDpiAwarenessContext_proc(ctx);
+							
+							printf("DPI awareness level %d\n",level);
+						}
+					}
+				}
+			}
+		}
+	}
 	
 	if (!install_hook())
 	{
